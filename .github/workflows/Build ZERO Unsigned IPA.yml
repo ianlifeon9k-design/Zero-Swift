@@ -1,0 +1,55 @@
+
+name: Build ZERO Unsigned IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract ZERO ZIP
+        run: |
+          ZIP_FILE=$(find . -type f -iname "*.zip" | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "No ZIP found"
+            exit 1
+          fi
+          mkdir -p extracted
+          unzip -o "$ZIP_FILE" -d extracted
+
+      - name: Find Xcode project
+        run: |
+          PROJECT=$(find extracted -name "*.xcodeproj" -print -quit)
+          if [ -z "$PROJECT" ]; then
+            echo "No Xcode project found"
+            exit 1
+          fi
+          echo "PROJECT=$PROJECT" >> "$GITHUB_ENV"
+
+      - name: Build unsigned app
+        run: |
+          xcodebuild \
+            -project "$PROJECT" \
+            -scheme ZERO \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/*.app Payload/
+          zip -r ZERO.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZERO-Unsigned-IPA
+          path: ZERO.ipa
