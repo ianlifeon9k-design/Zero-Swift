@@ -1,3 +1,4 @@
+
 name: Extract ZERO ZIP
 
 on:
@@ -6,14 +7,26 @@ on:
 jobs:
   extract:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Extract ZIP
+      - name: Find and extract ZERO ZIP
         run: |
-          unzip -o "ZERO Swift.zip" -d extracted
+          ZIP_FILE=$(find . -type f -iname "*.zip" | head -n 1)
 
-      - uses: actions/upload-artifact@v4
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERROR: No ZIP file found in repository."
+            exit 1
+          fi
+
+          echo "Found: $ZIP_FILE"
+          mkdir -p extracted
+          unzip -o "$ZIP_FILE" -d extracted
+
+      - name: Upload extracted project
+        uses: actions/upload-artifact@v4
         with:
           name: ZERO-Extracted
           path: extracted/
